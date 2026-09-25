@@ -28,22 +28,56 @@
 
 ```bash
 cd backend
-python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+python3 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
 ./run.sh
 ```
 
 健康检查：`curl http://127.0.0.1:8000/api/health`
 
+> 依赖版本在 `requirements.txt` 里全部锁定（含传递依赖），本地、换机器、
+> Docker 构建装出的环境一致；不要写成 `>=` 范围。
+> `run.sh` 会识别从别的机器拷来的、无法运行的 `.venv` 并自动重建。
+
 ### 前端
 
 ```bash
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
 前端默认监听 `http://127.0.0.1:5173/`，dev server 不会自动打开浏览器，
 需要自己访问。`/api` 由 vite 代理到后端 `http://127.0.0.1:8000`。
+
+> 前端依赖锁定在 `package.json` + `package-lock.json`，统一用 `npm ci`
+> 按锁文件安装；Docker 构建同样走 `npm ci`。
+
+## 统计口径（固定）
+
+概览卡片、模块列表、模块页统计卡片共用同一套口径，定义在
+`backend/app/catalog.py`（前端对应 `frontend/src/modules.ts`）：
+
+- **待处理**：模块状态不是末态（状态序列最后一个）的全部条目；
+- **异常量**：状态命中该模块异常状态集合（停用、作废、故障、不合格等）的条目；
+- `pending` / `abnormal` 不作为独立数据维护，统一由状态推导，动作流转后自动更新。
+
+示例数据由 `backend/app/seed.py` 按台账**确定性生成**，每模块固定 3 条，
+任何机器启动后概览都呈现同一组数字：
+
+| 业务模块 | 今日新增 | 待处理 | 异常量 |
+| --- | --- | --- | --- |
+| 全部 18 个模块合计 | 54 | 54 | 7 |
+
+概览（`GET /api/overview`）的计数直接取自各模块服务的未筛选列表，
+与 `GET /api/<模块>` 列表是同一条取数路径；模块列表响应里的 `stats`
+与表格同一次请求返回。口径回归测试见
+`backend/app/tests/test_caliber.py`，本地执行：
+
+```bash
+cd backend
+.venv/bin/python -m pip install -r requirements-dev.txt
+.venv/bin/python -m pytest app/tests
+```
 
 ## 业务模块
 
@@ -70,7 +104,8 @@ npm run dev
 
 ## 约定
 
-- 每个模块的前端页面在 `frontend/src/views/<模块>/index.vue`，后端接口在
-  `backend/app/routers/<模块>.py`，业务规则在 `backend/app/services/<模块>.py`。
-- 列表接口统一返回 `{ items, total, page, size }`，动作接口统一返回 `{ ok, message }`。
-- 状态流转只允许在 `app/services` 里改，路由层不做业务判断。
+- 每个模块的前端页面在 `frontend/src/views/<模块>/index.vue`（仅挂载共享组件
+  `components/ModulePage.vue`），后端接口由 `app/routers/factory.py` 统一生成，
+  业务规则共用 `app/services/base.py`；模块差异只写在 `app/catalog.py`。
+- 列表接口统一返回 `{ items, total, page, size, stats }`，动作接口统一返回 `{ ok, message }`。
+- 状态流转、待处理/异常判定只允许在 `app/catalog.py` 改口径，路由层不做业务判断。

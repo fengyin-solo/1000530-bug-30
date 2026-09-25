@@ -1,0 +1,4 @@
+# 开发/测试环境额外依赖；生产部署只装 requirements.txt 即可
+-r requirements.txt
+pytest==8.4.2
+httpx==0.28.1
