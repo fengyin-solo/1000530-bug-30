@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.stats import evaluate_stats
 from app.store import store
 
 MODULE = "section"
@@ -10,6 +11,11 @@ REQUIRED_FIELDS = ["区段编码", "区段名称", "所属线路"]
 STATUS_ORDER = ["在建", "已投用", "限速运行", "已封闭"]
 ACTION_RULES = {"办理投用": "已投用", "申请限速": "限速运行", "封闭区段": "已封闭"}
 NEGATIVE_ACTIONS = []
+STAT_RULES = [
+    ('在用区段', 'status', 'status', '已投用'),
+    ('限速区段', 'status', 'status', '限速运行'),
+    ('封闭区段', 'status', 'status', '已封闭'),
+]
 
 
 class SectionService:
@@ -32,6 +38,10 @@ class SectionService:
 
     def get_entry(self, entry_id: int) -> dict[str, Any] | None:
         return store.find(MODULE, entry_id)
+
+    def stats(self) -> list[dict[str, Any]]:
+        """模块统计卡片：与运营概览共用同一套口径，数字实时从当前记录算出。"""
+        return evaluate_stats(store.rows(MODULE), STAT_RULES)
 
     def create_entry(self, values: dict[str, Any]) -> tuple[dict[str, Any] | None, list[str]]:
         missing = [field for field in REQUIRED_FIELDS if not str(values.get(field) or "").strip()]

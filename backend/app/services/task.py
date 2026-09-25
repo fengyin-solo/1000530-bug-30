@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.stats import evaluate_stats
 from app.store import store
 
 MODULE = "task"
@@ -10,6 +11,11 @@ REQUIRED_FIELDS = ["任务编号", "关联计划", "检修人员"]
 STATUS_ORDER = ["待开始", "检修中", "待验收", "已完成"]
 ACTION_RULES = {"开始任务": "检修中", "提交验收": "待验收", "确认完成": "已完成"}
 NEGATIVE_ACTIONS = []
+STAT_RULES = [
+    ('待开始任务', 'status', 'status', '待开始'),
+    ('检修中任务', 'status', 'status', '检修中'),
+    ('遗留问题数', 'sum', '遗留问题数', None),
+]
 
 
 class TaskService:
@@ -32,6 +38,10 @@ class TaskService:
 
     def get_entry(self, entry_id: int) -> dict[str, Any] | None:
         return store.find(MODULE, entry_id)
+
+    def stats(self) -> list[dict[str, Any]]:
+        """模块统计卡片：与运营概览共用同一套口径，数字实时从当前记录算出。"""
+        return evaluate_stats(store.rows(MODULE), STAT_RULES)
 
     def create_entry(self, values: dict[str, Any]) -> tuple[dict[str, Any] | None, list[str]]:
         missing = [field for field in REQUIRED_FIELDS if not str(values.get(field) or "").strip()]

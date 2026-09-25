@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.stats import evaluate_stats
 from app.store import store
 
 MODULE = "dispose"
@@ -10,6 +11,11 @@ REQUIRED_FIELDS = ["处置单号", "关联故障", "处置措施"]
 STATUS_ORDER = ["待受理", "处置中", "待验收", "已验收"]
 ACTION_RULES = {"受理处置": "处置中", "提交验收": "待验收", "确认验收": "已验收"}
 NEGATIVE_ACTIONS = []
+STAT_RULES = [
+    ('待受理处置', 'status', 'status', '待受理'),
+    ('处置中单据', 'status', 'status', '处置中'),
+    ('本月验收单数', 'status', 'status', '已验收'),
+]
 
 
 class DisposeService:
@@ -32,6 +38,10 @@ class DisposeService:
 
     def get_entry(self, entry_id: int) -> dict[str, Any] | None:
         return store.find(MODULE, entry_id)
+
+    def stats(self) -> list[dict[str, Any]]:
+        """模块统计卡片：与运营概览共用同一套口径，数字实时从当前记录算出。"""
+        return evaluate_stats(store.rows(MODULE), STAT_RULES)
 
     def create_entry(self, values: dict[str, Any]) -> tuple[dict[str, Any] | None, list[str]]:
         missing = [field for field in REQUIRED_FIELDS if not str(values.get(field) or "").strip()]

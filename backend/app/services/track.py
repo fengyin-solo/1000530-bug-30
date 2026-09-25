@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.stats import evaluate_stats
 from app.store import store
 
 MODULE = "track"
@@ -10,6 +11,11 @@ REQUIRED_FIELDS = ["设备编号", "制式类型", "区段长度"]
 STATUS_ORDER = ["待测试", "运用正常", "分路不良", "已更换"]
 ACTION_RULES = {"提交测试": "运用正常", "确认正常": "分路不良", "更换设备": "已更换"}
 NEGATIVE_ACTIONS = []
+STAT_RULES = [
+    ('在运轨道电路', 'status', 'status', '运用正常'),
+    ('分路不良区段', 'status', 'status', '分路不良'),
+    ('待测试设备', 'status', 'status', '待测试'),
+]
 
 
 class TrackService:
@@ -32,6 +38,10 @@ class TrackService:
 
     def get_entry(self, entry_id: int) -> dict[str, Any] | None:
         return store.find(MODULE, entry_id)
+
+    def stats(self) -> list[dict[str, Any]]:
+        """模块统计卡片：与运营概览共用同一套口径，数字实时从当前记录算出。"""
+        return evaluate_stats(store.rows(MODULE), STAT_RULES)
 
     def create_entry(self, values: dict[str, Any]) -> tuple[dict[str, Any] | None, list[str]]:
         missing = [field for field in REQUIRED_FIELDS if not str(values.get(field) or "").strip()]

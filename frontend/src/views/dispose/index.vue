@@ -57,7 +57,10 @@
 
     <footer class="page-foot">
       <span>共 {{ total }} 条故障处置记录</span>
-      <span v-if="errorMessage" class="error-text">{{ errorMessage }}</span>
+      <span v-if="errorMessage" class="error-text">
+        {{ errorMessage }}
+        <button class="link" type="button" @click="reload">重试</button>
+      </span>
     </footer>
   </section>
 </template>
@@ -66,6 +69,7 @@
 import { onMounted, ref } from 'vue'
 
 import { request } from '@/api/client'
+import { fetchModuleStats, type StatCard } from '@/api/overview'
 
 type Row = Record<string, string | number | null>
 
@@ -73,7 +77,7 @@ const ENDPOINT = '/api/dispose'
 const columns = ["处置单号", "关联故障", "处置措施", "更换器材", "处置人员", "完成时间", "验收人员", "处置状态"]
 const actions = ["受理处置", "提交验收", "确认验收"]
 const statuses = ["待受理", "处置中", "待验收", "已验收"]
-const stats = [{"label": "待受理处置", "value": 0}, {"label": "处置中单据", "value": 0}, {"label": "本月验收单数", "value": 0}]
+const stats = ref<StatCard[]>([{"label": "待受理处置", "value": 0}, {"label": "处置中单据", "value": 0}, {"label": "本月验收单数", "value": 0}])
 
 const rows = ref<Row[]>([])
 const total = ref(0)
@@ -110,8 +114,20 @@ async function runAction(action: string, row: Row) {
   }
 }
 
+async function loadStats() {
+  try {
+    const next = await fetchModuleStats('dispose')
+    if (next.length) {
+      stats.value = next
+    }
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '统计信息读取失败，请稍后重试'
+  }
+}
+
 async function reload() {
   errorMessage.value = ''
+  void loadStats()
   const query = new URLSearchParams(filters.value as Record<string, string>).toString()
   try {
     const response = await request(`${ENDPOINT}?${query}`)

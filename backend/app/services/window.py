@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.stats import evaluate_stats
 from app.store import store
 
 MODULE = "window"
@@ -10,6 +11,11 @@ REQUIRED_FIELDS = ["天窗编号", "作业类型", "作业区段"]
 STATUS_ORDER = ["待申请", "已批复", "作业中", "已销记"]
 ACTION_RULES = {"提交申请": "已批复", "开始作业": "作业中", "销记天窗": "已销记"}
 NEGATIVE_ACTIONS = []
+STAT_RULES = [
+    ('待申请天窗', 'status', 'status', '待申请'),
+    ('作业中天窗', 'status', 'status', '作业中'),
+    ('本月天窗数', 'month', '计划时段', None),
+]
 
 
 class WindowService:
@@ -32,6 +38,10 @@ class WindowService:
 
     def get_entry(self, entry_id: int) -> dict[str, Any] | None:
         return store.find(MODULE, entry_id)
+
+    def stats(self) -> list[dict[str, Any]]:
+        """模块统计卡片：与运营概览共用同一套口径，数字实时从当前记录算出。"""
+        return evaluate_stats(store.rows(MODULE), STAT_RULES)
 
     def create_entry(self, values: dict[str, Any]) -> tuple[dict[str, Any] | None, list[str]]:
         missing = [field for field in REQUIRED_FIELDS if not str(values.get(field) or "").strip()]

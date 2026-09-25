@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.stats import evaluate_stats
 from app.store import store
 
 MODULE = "atp"
@@ -10,6 +11,11 @@ REQUIRED_FIELDS = ["设备编号", "防护等级", "覆盖区段"]
 STATUS_ORDER = ["待启用", "防护正常", "版本待升级", "已停用"]
 ACTION_RULES = {"启用防护": "防护正常", "提交升级": "版本待升级", "停用防护": "已停用"}
 NEGATIVE_ACTIONS = ["停用防护"]
+STAT_RULES = [
+    ('在运防护设备', 'status', 'status', '防护正常'),
+    ('待升级版本', 'status', 'status', '版本待升级'),
+    ('覆盖区段数', 'distinct', '覆盖区段', None),
+]
 
 
 class AtpService:
@@ -32,6 +38,10 @@ class AtpService:
 
     def get_entry(self, entry_id: int) -> dict[str, Any] | None:
         return store.find(MODULE, entry_id)
+
+    def stats(self) -> list[dict[str, Any]]:
+        """模块统计卡片：与运营概览共用同一套口径，数字实时从当前记录算出。"""
+        return evaluate_stats(store.rows(MODULE), STAT_RULES)
 
     def create_entry(self, values: dict[str, Any]) -> tuple[dict[str, Any] | None, list[str]]:
         missing = [field for field in REQUIRED_FIELDS if not str(values.get(field) or "").strip()]

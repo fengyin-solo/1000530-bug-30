@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.stats import evaluate_stats
 from app.store import store
 
 MODULE = "verify"
@@ -10,6 +11,11 @@ REQUIRED_FIELDS = ["验收单号", "关联任务", "验收项目"]
 STATUS_ORDER = ["待验收", "验收中", "已通过", "需返工"]
 ACTION_RULES = {"开始验收": "验收中", "确认通过": "已通过", "下发返工": "需返工"}
 NEGATIVE_ACTIONS = []
+STAT_RULES = [
+    ('待验收单据', 'status', 'status', '待验收'),
+    ('本月通过数', 'status', 'status', '已通过'),
+    ('需返工项数', 'status', 'status', '需返工'),
+]
 
 
 class VerifyService:
@@ -32,6 +38,10 @@ class VerifyService:
 
     def get_entry(self, entry_id: int) -> dict[str, Any] | None:
         return store.find(MODULE, entry_id)
+
+    def stats(self) -> list[dict[str, Any]]:
+        """模块统计卡片：与运营概览共用同一套口径，数字实时从当前记录算出。"""
+        return evaluate_stats(store.rows(MODULE), STAT_RULES)
 
     def create_entry(self, values: dict[str, Any]) -> tuple[dict[str, Any] | None, list[str]]:
         missing = [field for field in REQUIRED_FIELDS if not str(values.get(field) or "").strip()]

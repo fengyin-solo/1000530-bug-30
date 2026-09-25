@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.stats import evaluate_stats
 from app.store import store
 
 MODULE = "assess"
@@ -10,6 +11,11 @@ REQUIRED_FIELDS = ["评估编号", "评估对象", "评估周期"]
 STATUS_ORDER = ["待评估", "评估中", "已定级", "已复评"]
 ACTION_RULES = {"开始评估": "评估中", "确认定级": "已定级", "发起复评": "已复评"}
 NEGATIVE_ACTIONS = []
+STAT_RULES = [
+    ('待评估对象', 'status', 'status', '待评估'),
+    ('高风险设备', 'contains', '风险等级', '高'),
+    ('健康分值均值', 'avg', '健康分值', None),
+]
 
 
 class AssessService:
@@ -32,6 +38,10 @@ class AssessService:
 
     def get_entry(self, entry_id: int) -> dict[str, Any] | None:
         return store.find(MODULE, entry_id)
+
+    def stats(self) -> list[dict[str, Any]]:
+        """模块统计卡片：与运营概览共用同一套口径，数字实时从当前记录算出。"""
+        return evaluate_stats(store.rows(MODULE), STAT_RULES)
 
     def create_entry(self, values: dict[str, Any]) -> tuple[dict[str, Any] | None, list[str]]:
         missing = [field for field in REQUIRED_FIELDS if not str(values.get(field) or "").strip()]

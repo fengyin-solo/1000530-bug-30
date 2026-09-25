@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.stats import evaluate_stats
 from app.store import store
 
 MODULE = "spare"
@@ -10,6 +11,11 @@ REQUIRED_FIELDS = ["领用单号", "器材名称", "器材规格"]
 STATUS_ORDER = ["待审批", "已批准", "已领用", "已退回"]
 ACTION_RULES = {"批准领用": "已批准", "确认发放": "已领用", "退回器材": "已退回"}
 NEGATIVE_ACTIONS = []
+STAT_RULES = [
+    ('待审批领用', 'status', 'status', '待审批'),
+    ('本月领用单', 'month', '领用日期', None),
+    ('退回单数', 'status', 'status', '已退回'),
+]
 
 
 class SpareService:
@@ -32,6 +38,10 @@ class SpareService:
 
     def get_entry(self, entry_id: int) -> dict[str, Any] | None:
         return store.find(MODULE, entry_id)
+
+    def stats(self) -> list[dict[str, Any]]:
+        """模块统计卡片：与运营概览共用同一套口径，数字实时从当前记录算出。"""
+        return evaluate_stats(store.rows(MODULE), STAT_RULES)
 
     def create_entry(self, values: dict[str, Any]) -> tuple[dict[str, Any] | None, list[str]]:
         missing = [field for field in REQUIRED_FIELDS if not str(values.get(field) or "").strip()]

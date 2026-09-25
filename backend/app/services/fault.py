@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.stats import evaluate_stats
 from app.store import store
 
 MODULE = "fault"
@@ -10,6 +11,11 @@ REQUIRED_FIELDS = ["故障编号", "发生设备", "故障现象"]
 STATUS_ORDER = ["待定级", "已定级", "处置中", "已恢复", "已挂起"]
 ACTION_RULES = {"确认定级": "已定级", "提交恢复": "已恢复", "挂起故障": "已挂起"}
 NEGATIVE_ACTIONS = []
+STAT_RULES = [
+    ('待定级故障', 'status', 'status', '待定级'),
+    ('处置中故障', 'status', 'status', '处置中'),
+    ('今日恢复数', 'today', '恢复时间', None),
+]
 
 
 class FaultService:
@@ -32,6 +38,10 @@ class FaultService:
 
     def get_entry(self, entry_id: int) -> dict[str, Any] | None:
         return store.find(MODULE, entry_id)
+
+    def stats(self) -> list[dict[str, Any]]:
+        """模块统计卡片：与运营概览共用同一套口径，数字实时从当前记录算出。"""
+        return evaluate_stats(store.rows(MODULE), STAT_RULES)
 
     def create_entry(self, values: dict[str, Any]) -> tuple[dict[str, Any] | None, list[str]]:
         missing = [field for field in REQUIRED_FIELDS if not str(values.get(field) or "").strip()]

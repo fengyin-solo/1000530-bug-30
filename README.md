@@ -28,8 +28,7 @@
 
 ```bash
 cd backend
-python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-./run.sh
+./run.sh   # 自动建 .venv 并按锁定版本的 requirements.txt 安装依赖
 ```
 
 健康检查：`curl http://127.0.0.1:8000/api/health`
@@ -38,7 +37,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 
 ```bash
 cd frontend
-npm install
+npm ci     # 严格按 package-lock.json 安装，保证各环境依赖一致
 npm run dev
 ```
 
@@ -74,3 +73,7 @@ npm run dev
   `backend/app/routers/<模块>.py`，业务规则在 `backend/app/services/<模块>.py`。
 - 列表接口统一返回 `{ items, total, page, size }`，动作接口统一返回 `{ ok, message }`。
 - 状态流转只允许在 `app/services` 里改，路由层不做业务判断。
+- 运营概览卡片、模块汇总与各模块页的统计卡片都取自 `GET /api/overview`，
+  统计口径统一在 `backend/app/stats.py` 与各模块 service 的 `STAT_RULES` 里维护。
+- 依赖一律锁定：后端 `requirements.txt` 固定到具体版本，前端提交
+  `package-lock.json` 并用 `npm ci` 安装，本地、构建、部署保持一致。

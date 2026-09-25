@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.stats import evaluate_stats
 from app.store import store
 
 MODULE = "alarm"
@@ -10,6 +11,11 @@ REQUIRED_FIELDS = ["报警编号", "报警类型", "报警等级"]
 STATUS_ORDER = ["待确认", "已确认", "已处置", "已忽略"]
 ACTION_RULES = {"确认报警": "已确认", "处置报警": "已处置", "忽略报警": "已忽略"}
 NEGATIVE_ACTIONS = ["忽略报警"]
+STAT_RULES = [
+    ('今日报警', 'today', '触发时间', None),
+    ('待确认报警', 'status', 'status', '待确认'),
+    ('高等级报警', 'contains', '报警等级', '高'),
+]
 
 
 class AlarmService:
@@ -32,6 +38,10 @@ class AlarmService:
 
     def get_entry(self, entry_id: int) -> dict[str, Any] | None:
         return store.find(MODULE, entry_id)
+
+    def stats(self) -> list[dict[str, Any]]:
+        """模块统计卡片：与运营概览共用同一套口径，数字实时从当前记录算出。"""
+        return evaluate_stats(store.rows(MODULE), STAT_RULES)
 
     def create_entry(self, values: dict[str, Any]) -> tuple[dict[str, Any] | None, list[str]]:
         missing = [field for field in REQUIRED_FIELDS if not str(values.get(field) or "").strip()]

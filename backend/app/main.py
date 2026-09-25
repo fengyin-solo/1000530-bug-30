@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
+from app.overview import build_overview
 from app.routers import ROUTERS
 from app.store import store
 
@@ -34,5 +35,5 @@ def health() -> dict[str, object]:
 
 @app.get("/api/overview")
 def overview() -> dict[str, object]:
-    """运营概览：把各业务模块的待处理量汇总成看板卡片。"""
-    return store.overview()
+    """运营概览：卡片与各模块统计都来自同一份实时汇总，和模块列表同口径。"""
+    return build_overview()

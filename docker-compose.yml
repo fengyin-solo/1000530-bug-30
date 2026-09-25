@@ -9,5 +9,8 @@ services:
     build: ./frontend
     ports:
       - "5173:5173"
+    environment:
+      # 容器里 127.0.0.1 是前端自己，/api 代理要指向 backend 服务
+      - VITE_PROXY_TARGET=http://backend:8000
     depends_on:
       - backend
